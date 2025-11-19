@@ -13,7 +13,7 @@ To get started, please follow the steps below to set up the environment.
 1. Clone the Repository
 Clone this repository to your local machine and navigate to the project directory.
 ```bash
-git clone https://github.com/YOUR_USERNAME/LLaVA-EVA02CLIP-Qwen3.git
+git clone https://github.com/M-6J/LLaVA-EVA02CLIP-Qwen3.git
 cd LLaVA-EVA02CLIP-Qwen3
 ```
 
@@ -38,7 +38,7 @@ pip install flash-attn --no-build-isolation
 [LLaVA Dataset](https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#visual-instruction-tuning)
 
 
-## Pretrain Qwen2
+## Pretrain LLaVA-EVA02-Qwen3
 
 ```bash
 bash scripts/v1.5/pretrain_evaclip2_qwen3.sh
@@ -46,7 +46,7 @@ bash scripts/v1.5/pretrain_evaclip2_qwen3.sh
 
 The checkpoint for the pretrain projector is located at `checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain-2mm_projector.bin`
 
-## Finetune Qwen2
+## Finetune LLaVA-EVA02-Qwen3
 
 ```bash
 bash scripts/v1.5/finetune_evaclip2_qwen3.sh
