@@ -7,7 +7,7 @@ deepspeed llava/train/train_mem.py \
     --data_path ./playground/data/llava_v1_5_mix665k.json \
     --image_folder ./playground/data \
     --vision_tower EVA02-CLIP-L-14-336 \
-    --pretrain_mm_mlp_adapter ./checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain-2/mm_projector.bin \
+    --pretrain_mm_mlp_adapter ./checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain/mm_projector.bin \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \

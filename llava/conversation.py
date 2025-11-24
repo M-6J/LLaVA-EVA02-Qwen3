@@ -13,8 +13,8 @@ class SeparatorStyle(Enum):
     MPT = auto()
     PLAIN = auto()
     LLAMA_2 = auto()
-    QWEN_3 = auto()  # fix: add qwen2
-    CHATML = auto()
+    QWEN_3 = auto()
+    CHATML = auto()  # fix: add qwen3
 
 
 @dataclasses.dataclass
@@ -53,17 +53,7 @@ class Conversation:
                     ret += role + ": " + message + self.sep
                 else:
                     ret += role + ":"
-        elif self.sep_style == SeparatorStyle.QWEN_3:  # fix: add qwen3
-            seps = [self.sep, self.sep2]
-            ret = self.system + seps[0]
-            for i, (role, message) in enumerate(messages):
-                if message:
-                    if type(message) is tuple:
-                        message, _, _ = message
-                    ret += role + ": " + message + seps[i % 2]
-                else:
-                    ret += role + ":"
-        elif self.sep_style == SeparatorStyle.CHATML:
+        elif self.sep_style == SeparatorStyle.CHATML:  # fix: add qwen3
             ret = "" if self.system == "" else self.system + self.sep + "\n"
             for role, message in messages:
                 if message:
@@ -73,7 +63,6 @@ class Conversation:
                     ret += role + "\n" + message + self.sep + "\n"
                 else:
                     ret += role + "\n"
-            return ret
         elif self.sep_style == SeparatorStyle.TWO:
             seps = [self.sep, self.sep2]
             ret = self.system + seps[0]
@@ -393,30 +382,17 @@ Answer the questions.""",
     sep="<|im_end|>",
 )
 
-
 # fix: add qwen3
 conv_qwen_3 = Conversation(
-    system="A chat between a curious user and an artificial intelligence assistant. "
-    "The assistant gives helpful, detailed, and polite answers to the user's questions.",
-    roles=("USER", "ASSISTANT"),
+    system="""<|im_start|>system
+You are a helpful assistant.""",
+    roles=("<|im_start|>user", "<|im_start|>assistant"),
     version="qwen_v3",
-    messages=(),
+    messages=[],
     offset=0,
-    sep_style=SeparatorStyle.QWEN_3,
-    sep=" ",
-    sep2="<|endoftext|>",
+    sep_style=SeparatorStyle.CHATML,
+    sep="<|im_end|>",
 )
-
-# conv_qwen_2 = Conversation(
-#     system="""<|im_start|>system
-# You are a helpful assistant.""",
-#     roles=("<|im_start|>user", "<|im_start|>assistant"),
-#     version="qwen_v2",
-#     messages=[],
-#     offset=0,
-#     sep_style=SeparatorStyle.CHATML,
-#     sep="<|im_end|>",
-# )
 
 default_conversation = conv_qwen_3
 conv_templates = {

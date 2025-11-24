@@ -413,101 +413,86 @@ def preprocess_llama_2(
 
 # fix: add qwen3
 def preprocess_qwen_3(
-    sources,
-    tokenizer: transformers.PreTrainedTokenizer,
-    has_image: bool = False
+    sources, 
+    tokenizer: transformers.PreTrainedTokenizer, 
+    has_image: bool = False, 
+    max_len=2048, 
+    system_message: str = "You are a helpful assistant."
 ) -> Dict:
-    # print('-----preprocess_qwen_3-------')
-    conv = conversation_lib.default_conversation.copy()
-    roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
+    #print(f'------ preprocess_qwen_3 called with {len(sources)} sources ------')
+    # roles = {"human": "<|im_start|>user", "gpt": "<|im_start|>assistant"}
+    roles = {"human": "user", "gpt": "assistant"}
+
+    # Add image tokens to tokenizer as a special tokens
+    # Use a deepcopy of tokenizer so that we don't modify on the tokenizer
+    tokenizer = copy.deepcopy(tokenizer)
+    # When there is actually an image, we add the image tokens as a special token
+    if has_image:
+        tokenizer.add_tokens(["<image>"], special_tokens=True)
+
+    image_token_index = tokenizer.convert_tokens_to_ids("<image>")
+    im_start, im_end = tokenizer.additional_special_tokens_ids[:2]
+    # unmask_tokens = ["<|im_start|>", "<|im_start|>", "\n"]
+    unmask_tokens_idx =  [198, im_start, im_end]
+    nl_tokens = tokenizer("\n").input_ids
+
+    # Reset Qwen chat templates so that it won't include system message every time we apply
+    chat_template = "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
+    tokenizer.chat_template = chat_template
+
+    # _system = tokenizer("system").input_ids + nl_tokens
+    # _user = tokenizer("user").input_ids + nl_tokens
+    # _assistant = tokenizer("assistant").input_ids + nl_tokens
 
     # Apply prompt templates
-    conversations = []
+    input_ids, targets = [], []
     for i, source in enumerate(sources):
-        if roles[source[0]["from"]] != conv.roles[0]:
-            # Skip the first one if it is not from human
+        if roles[source[0]["from"]] != roles["human"]:
             source = source[1:]
 
-        conv.messages = []
-        for j, sentence in enumerate(source):
-            role = roles[sentence["from"]]
-            assert role == conv.roles[j % 2], f"{i}"
-            conv.append_message(role, sentence["value"])
-        conversations.append(conv.get_prompt())
+        input_id, target = [], []
 
-    # Tokenize conversations
+        # New version, use apply chat template
+        # Build system message for each sentence
+        input_id += tokenizer.apply_chat_template([{"role" : "system", "content" : system_message}])
+        target += [IGNORE_INDEX] * len(input_id)
 
-    if has_image:
-        input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
-    else:
-        input_ids = tokenizer(
-            conversations,
-            return_tensors="pt",
-            padding="longest",
-            max_length=tokenizer.model_max_length,
-            truncation=True,
-        ).input_ids
+        for conv in source:
+            # Make sure llava data can load
+            try:
+                role = conv["role"]
+                content = conv["content"]
+            except:
+                role = conv["from"]
+                content = conv["value"]
 
-    targets = input_ids.clone()
-
-    assert conv.sep_style == conversation_lib.SeparatorStyle.QWEN_3
-
-    # Mask targets
-    sep = conv.sep + conv.roles[1] + ": "
-    for conversation, target in zip(conversations, targets):
-        total_len = int(target.ne(tokenizer.pad_token_id).sum())
-
-        rounds = conversation.split(conv.sep2)
-        rounds_len = len(rounds)
-        cur_len = 0
-        # target[:cur_len] = IGNORE_INDEX
-        for i, rou in enumerate(rounds):
-            if rou == "":
-                break
-
-            parts = rou.split(sep)
-            if len(parts) != 2:
-                break
-            parts[0] += sep
-
-            if has_image:
-                round_ids = tokenizer_image_token(rou, tokenizer)
-                instruction_ids = tokenizer_image_token(parts[0], tokenizer)
-                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
-
-                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
-                round_len = len(round_ids)
-
+            role =  roles.get(role, role)
+            
+            conv = [{"role" : role, "content" : content}]
+            encode_id = tokenizer.apply_chat_template(conv)
+            input_id += encode_id
+            if role in ["user", "system"]:
+                target += [IGNORE_INDEX] * len(encode_id)
             else:
-                round_ids = tokenizer(rou).input_ids
-                instruction_ids = tokenizer(parts[0]).input_ids
-                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
+                target += encode_id
+        
 
-                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
-                round_len = len(round_ids)
-
-            if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
-                round_len += 1
-                instruction_len += 1
-
-            target[cur_len: cur_len + instruction_len] = IGNORE_INDEX
-
-            cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
-
-        if cur_len < tokenizer.model_max_length:
-            if cur_len != total_len + rounds_len - 2:
-                target[:] = IGNORE_INDEX
-                print(
-                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
-                    f" (ignored)"
-                )
+                    
+        assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
+        for idx, encode_id in enumerate(input_id):
+            if encode_id in unmask_tokens_idx:
+                target[idx] = encode_id
+            if encode_id == image_token_index:
+                input_id[idx] = IMAGE_TOKEN_INDEX
+        input_ids.append(input_id)
+        targets.append(target)
+    input_ids = torch.tensor(input_ids, dtype=torch.long)
+    targets = torch.tensor(targets, dtype=torch.long)
 
     return dict(
         input_ids=input_ids,
         labels=targets,
     )
-
 
 def preprocess_v1(
     sources,

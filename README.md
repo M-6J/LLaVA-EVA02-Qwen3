@@ -44,7 +44,7 @@ pip install flash-attn --no-build-isolation
 bash scripts/v1.5/pretrain_evaclip2_qwen3.sh
 ```
 
-The checkpoint for the pretrain projector is located at `checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain-2mm_projector.bin`
+The checkpoint for the pretrain projector is located at `checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain/mm_projector.bin`
 
 ## Finetune LLaVA-EVA02-Qwen3
 
