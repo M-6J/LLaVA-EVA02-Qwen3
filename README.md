@@ -1,6 +1,6 @@
 # LLaVA-EVA02-Qwen3
 
-This repository implements a customization of the [LLaVA-1.5](https://github.com/haotian-liu/LLaVA) VLM architecture. The original model is enhanced by integrating the [EVA02-CLIP](https://huggingface.co/QuanSun/EVA-CLIP) vision encoder and the [Qwen3](https://github.com/QwenLM/Qwen3) language model. This project aims to enhance fine-grained visual recognition and complex reasoning capabilities beyond the original baseline.
+This repository implements a customization of the [LLaVA-1.5](https://github.com/haotian-liu/LLaVA) VLM architecture. The original model is enhanced by integrating the [EVA02-CLIP](https://github.com/baaivision/EVA/tree/master/EVA-CLIP) vision encoder and the [Qwen3](https://github.com/QwenLM/Qwen3) language model. This project aims to enhance fine-grained visual recognition and complex reasoning capabilities beyond the original baseline.
 
  ## 🚀 Model Architecture
 
@@ -41,17 +41,57 @@ pip install flash-attn --no-build-isolation
 ## Pretrain LLaVA-EVA02-Qwen3
 
 ```bash
-bash scripts/v1.5/pretrain_evaclip2_qwen3.sh
+bash scripts/eva2-qwen3/train/pretrain_evaclip2_qwen3.sh
 ```
 
-The checkpoint for the pretrain projector is located at `checkpoints/llava-v1.5-evq02clip-qwen3-8b-pretrain/mm_projector.bin`
+The checkpoint for the pretrain projector is located at `checkpoints/llava-evqclip2-qwen3-8b-pretrain/mm_projector.bin`
 
 ## Finetune LLaVA-EVA02-Qwen3
 
 ```bash
-bash scripts/v1.5/finetune_evaclip2_qwen3.sh
+bash scripts/eva2-qwen3/train/finetune_evaclip2_qwen3.sh
 ```
 
+## 🔍 Evaluation
+```bash
+bash scripts/eva2-qwen3/eval/*dataset_name*.sh
+```
+Refer to the original LLaVA [Evaluation.md](https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md).
+If any issues occur with random during POPE evaluation, refer to [this link](https://github.com/haotian-liu/LLaVA/issues/626#issuecomment-1772025961).
 
+
+## 🧪 Results
+
+### Model Configuration
+| Component        | Description |
+|------------------|-------------|
+| **Model**        | LLaVA-EVA02-Qwen3 |
+| **Vision Encoder** | [EVA02-CLIP-L-14-336](https://huggingface.co/QuanSun/EVA-CLIP) |
+| **Language Model** | [Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) |
+
+---
+
+### 📊 Benchmark Performance
+
+#### **VQA Benchmarks**
+| Dataset | Score |
+|---------|-------|
+| **VQAv2** | 79.48 |
+| **GQA** | 62.41 |
+| **ScienceQA** | 81.89 |
+| **ScienceQA-IMG** | 77.00 |
+
+#### **POPE**
+| Setting | Score |
+|---------|-------|
+| **Random** | 88.41 |
+| **Popular** | 87.50 |
+| **Adversarial** | 86.33 |
+
+#### **MMBench**
+| Dataset | Score |
+|---------|-------|
+| **MMBench (EN)** | 75.00 |
+| **MMBench (CN)** | 72.42 |
 
 
